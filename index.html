@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" href="monaco.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+      }
+      .monaco {
+        height: 600px;
+        width: 800px;
+      }
+      .monaco-editor {
+        border: 1px solid #ccc;
+      }
+      .monaco-editor .line-numbers {
+        color: #939393;
+      }
+      .monaco-editor .line-numbers.active-line-number {
+        color: #444;
+      }
+      .monaco-editor .parameter-hints-widget > .phwrapper {
+        display: flex;
+        flex-direction: column-reverse;
+        max-width: 540px;
+        max-height: 250px;
+      }
+      .monaco-editor .parameter-hints-widget.multiple .controls {
+        display: flex;
+        padding: 0 2px;
+        flex-direction: row;
+        margin-bottom: 5px;
+        margin-right: 5px;
+      }
+      .monaco-editor .parameter-hints-widget last:p {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor" class="monaco"></div>
+    <script type="text/javascript">
+      function ready() {
+        // Add extra libraries for code completion to monaco instance.
+        // These definitions are imported from all *.d.ts
+        // files under the libraries folder
+        ['global', 'node', 'red'].forEach((name) => {
+          fetch(`libraries/${name}.d.ts`)
+            .then((resp) => resp.text())
+            .then((text) => {
+              monaco.languages.typescript.javascriptDefaults.addExtraLib(
+                text,
+                `file:///node_modules/@types/${name}/index.d.ts`
+              );
+              console.log('library loaded: ' + name);
+            });
+        });
+
+        // This simulation dynamically creates the module declaration
+        // from the package.json file
+        fetch('package.json')
+          .then((resp) => resp.json())
+          .then((packages) => {
+            var text = '';
+            for (var name in packages.devDependencies) {
+              text += `declare module "${name}"\n`;
+            }
+            monaco.languages.typescript.javascriptDefaults.addExtraLib(
+              text,
+              'file:///node_modules/@types/packages/index.d.ts'
+            );
+            console.log('packages loaded');
+          });
+
+        // Add custom modules on editor
+        // to have code completion when require or import them
+        ['capitalize', 'hello'].forEach((name) => {
+          fetch(`modules/${name}.js`)
+            .then((resp) => resp.text())
+            .then((text) => {
+              monaco.editor.createModel(
+                text,
+                'javascript',
+                monaco.Uri.parse(`file:///${name}.js`)
+              );
+              console.log('model created: ' + name);
+            });
+        });
+
+        // Initialize monaco editor with custom options
+        var container = document.getElementById('editor');
+        const editor = monaco.editor.create(container, {
+          fontSize: 13,
+          glyphMargin: false,
+          lineNumbersMinChars: 3,
+          language: 'javascript',
+          showFoldingControls: 'always',
+          renderLineHighlight: 'none',
+          fixedOverflowWidgets: true,
+          scrollBeyondLastLine: false,
+          accessibilitySupport: false,
+          emptySelectionClipboard: false,
+          snippetSuggestions: 'bottom',
+          wordBasedSuggestions: false,
+          scrollBeyondLastLine: false,
+          codeLens: false,
+          minimap: { enabled: false },
+          scrollbar: {
+            useShadows: false,
+            vertical: 'auto',
+            horizontal: 'auto',
+            horizontalScrollbarSize: 8,
+            verticalScrollbarSize: 8
+          }
+        });
+        editor.setModel(
+          monaco.editor.createModel(
+            "const hello = require('hello.js');\nconst fs = require('fs');\nconst capitalize = require('capitalize.js');\n\nvar r1 = capitalize.cap(\"united states\");\nvar r2 = capitalize.words(\"united states\");\n\nconsole.log(r1, r2);",
+            'javascript',
+            monaco.Uri.parse('file:///main.js')
+          )
+        );
+        console.log('editor created: ' + container.id);
+      }
+    </script>
+    <script src="monaco.js" onload="ready()"></script>
+  </body>
+</html>
